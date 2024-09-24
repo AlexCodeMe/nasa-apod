@@ -1,6 +1,6 @@
 package com.alexcasey.nasa_apod.model;
 
-import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -25,8 +25,9 @@ public class Item {
     private String title;
     private String explanation;
     private String url;
-    private BigDecimal price;
+    private Integer price;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "inventory_id")
     private Inventory inventory;

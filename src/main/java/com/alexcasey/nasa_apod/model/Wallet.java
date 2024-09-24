@@ -1,7 +1,5 @@
 package com.alexcasey.nasa_apod.model;
 
-import java.math.BigDecimal;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Entity;
@@ -24,19 +22,19 @@ public class Wallet {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private BigDecimal rubies;
-    private BigDecimal emeralds;
-    private BigDecimal sapphires;
-    private BigDecimal diamonds;
+    private Integer rubies;
+    private Integer emeralds;
+    private Integer sapphires;
+    private Integer diamonds;
 
     @JsonIgnore
     @OneToOne
     @JoinColumn(name = "account_id")
     private Account account;
 
-    public boolean deductRubies(BigDecimal amount) {
-        if (rubies.compareTo(amount) >= 0) {
-            rubies = rubies.subtract(amount);
+    public boolean deductRubies(Integer amount) {
+        if (rubies >= amount) {
+            rubies -= amount;
             return true;
         } else {
             return false;

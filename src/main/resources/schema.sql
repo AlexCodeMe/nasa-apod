@@ -1,14 +1,17 @@
+-- Account table (unchanged)
 CREATE TABLE IF NOT EXISTS account (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL
 );
 
+-- Role table (unchanged)
 CREATE TABLE IF NOT EXISTS role (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(20) NOT NULL
 );
 
+-- Account_roles table (unchanged)
 CREATE TABLE IF NOT EXISTS account_roles (
     account_id BIGINT NOT NULL,
     role_id BIGINT NOT NULL,
@@ -17,6 +20,7 @@ CREATE TABLE IF NOT EXISTS account_roles (
     FOREIGN KEY (role_id) REFERENCES role(id)
 );
 
+-- Wallet table (unchanged)
 CREATE TABLE IF NOT EXISTS wallet (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     account_id BIGINT UNIQUE,
@@ -27,6 +31,7 @@ CREATE TABLE IF NOT EXISTS wallet (
     FOREIGN KEY (account_id) REFERENCES account(id)
 );
 
+-- Inventory table (unchanged)
 CREATE TABLE IF NOT EXISTS inventory (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     account_id BIGINT UNIQUE,
@@ -39,13 +44,11 @@ CREATE TABLE IF NOT EXISTS item (
     title VARCHAR(255) NOT NULL,
     explanation TEXT,
     url VARCHAR(255),
-    hdurl VARCHAR(255),
-    media_type VARCHAR(50),
-    date DATE,
-    copyright VARCHAR(255),
+    price INTEGER,
     FOREIGN KEY (inventory_id) REFERENCES inventory(id)
 );
 
+-- Updated Apod table
 CREATE TABLE IF NOT EXISTS apod (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     copyright VARCHAR(255),

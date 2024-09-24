@@ -1,8 +1,8 @@
 package com.alexcasey.nasa_apod.controller;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -15,11 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.alexcasey.nasa_apod.enums.CurrencyEnum;
 import com.alexcasey.nasa_apod.model.Apod;
-import com.alexcasey.nasa_apod.model.Wallet;
-import com.alexcasey.nasa_apod.repository.AccountRepository;
-import com.alexcasey.nasa_apod.service.account.IAccountService;
 import com.alexcasey.nasa_apod.service.apod.IApodService;
-import com.alexcasey.nasa_apod.service.inventory.IInventoryService;
 import com.alexcasey.nasa_apod.service.wallet.IWalletService;
 
 import lombok.RequiredArgsConstructor;
@@ -31,101 +27,71 @@ public class ApodController {
 
     private final IApodService apodService;
     private final IWalletService walletService;
-    private final IInventoryService inventoryService;
-    private final IAccountService accountService;
-
-    private final AccountRepository accountRepository;
 
     private String getAuthenticatedUsername() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication.getName();
     }
 
-    private boolean canAffordApod(String username, CurrencyEnum currency, BigDecimal price) {
-        Wallet wallet = accountRepository.findWalletByUsername(username);
-        switch (currency) {
-            case RUBIES -> {
-                if (wallet.getRubies().compareTo(price) < 0) {
-                    return false;
-                }
-            }
-            case EMERALDS -> {
-                if (wallet.getEmeralds().compareTo(price) < 0) {
-                    return false;
-                }
-            }
-            case SAPPHIRES -> {
-                if (wallet.getSapphires().compareTo(price) < 0) {
-                    return false;
-                }
-            }
-            case DIAMONDS -> {
-                if (wallet.getDiamonds().compareTo(price) < 0) {
-                    return false;
-                }
-            }
-            default -> throw new UnsupportedOperationException("Unsupported currency: " + currency);
+    private <T> ResponseEntity<T> executeApodOperation(CurrencyEnum currency, Integer price, Supplier<T> operation) {
+        String username = getAuthenticatedUsername();
+        if (!walletService.canAffordQuery(username, currency, price)) {
+            return ResponseEntity.badRequest().build();
         }
-        return true;
+        walletService.withdraw(username, price, currency);
+        return ResponseEntity.ok(operation.get());
     }
 
     /**
      * Get the Astronomy Picture of the Day
-     * costs one ruby, emerald, or sapphire
+     * costs 1 ruby, emerald, or sapphire
      * 
-     * @return
+     * @return ResponseEntity<Apod>
      */
     @GetMapping
     public ResponseEntity<Apod> getApod(@RequestParam CurrencyEnum currency) {
-
-        String username = getAuthenticatedUsername();
-        if (!canAffordApod(username, currency, BigDecimal.ONE)) {
-            return ResponseEntity.badRequest().build();
-        }
-        walletService.withdraw(username, BigDecimal.ONE, currency);
-        return ResponseEntity.ok(apodService.getApod());
+        return executeApodOperation(currency, 1, apodService::getApod);
     }
 
     /**
      * Get the Astronomy Picture of the Day by Date
      * costs 3 ruby, sapphire, or emerald
      * 
-     * @return
+     * @return ResponseEntity<Apod>
      */
     @GetMapping("/by-date")
     public ResponseEntity<Apod> getApodByDate(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date,
             @RequestParam CurrencyEnum currency) {
-
-        String username = getAuthenticatedUsername();
-        if (!canAffordApod(username, currency, BigDecimal.valueOf(3))) {
-            return ResponseEntity.badRequest().build();
-        }
-        walletService.withdraw(username, BigDecimal.ONE, currency);
-        return ResponseEntity.ok(apodService.getApodByDate(date));
+        return executeApodOperation(currency, 3, () -> apodService.getApodByDate(date));
     }
 
     /**
      * Get the Astronomy Picture of the Day by Date range
      * costs 1 ruby, sapphire, or emerald per day
      * 
-     * @return
+     * @return ResponseEntity<List<Apod>>
      */
     @GetMapping("/by-date-range")
     public ResponseEntity<List<Apod>> getApodByDateRange(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate start_date,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate end_date) {
-        return ResponseEntity.ok(apodService.getApodByDateRange(start_date, end_date));
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate end_date,
+            @RequestParam CurrencyEnum currency) {
+
+        int price = (int) start_date.datesUntil(end_date).count();
+        return executeApodOperation(currency, price, () -> apodService.getApodByDateRange(start_date, end_date));
     }
 
     /**
      * Get the count random Astronomy Picture of the Days
      * costs 1 ruby, sapphire, or emerald per picture
      * 
-     * @return
+     * @return ResponseEntity<List<Apod>>
      */
     @GetMapping("/random")
-    public ResponseEntity<List<Apod>> getRandomApods(@RequestParam Integer count) {
-        return ResponseEntity.ok(apodService.getCountRandomApods(count));
+    public ResponseEntity<List<Apod>> getRandomApods(@RequestParam Integer count,
+            @RequestParam CurrencyEnum currency) {
+   
+        return executeApodOperation(currency, count, () -> apodService.getCountRandomApods(count));
     }
 }

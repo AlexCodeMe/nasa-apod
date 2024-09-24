@@ -1,6 +1,8 @@
 package com.alexcasey.nasa_apod.service.account;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,7 +23,9 @@ import com.alexcasey.nasa_apod.service.inventory.InventoryService;
 import com.alexcasey.nasa_apod.service.wallet.WalletService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AccountService implements IAccountService {
@@ -32,10 +36,14 @@ public class AccountService implements IAccountService {
     private final InventoryService inventoryService;
     private final RoleRepository roleRepository;
 
-    @Transactional
     @Override
+    @Transactional
     public Account createAccount(AuthRequest request) {
-        if (accountRepository.findByUsername(request.getUsername()) != null) {
+        log.debug("Attempting to create account for username: {}", request.getUsername());
+
+        Optional<Account> existingAccount = accountRepository.findByUsername(request.getUsername());
+        if (existingAccount.isPresent()) {
+            log.warn("Username already exists: {}", request.getUsername());
             throw new AlreadyExistsException("Username already exists");
         }
 
@@ -54,7 +62,9 @@ public class AccountService implements IAccountService {
         Role userRole = roleRepository.findByRole(RoleEnum.USER);
         newAccount.setRoles(Collections.singleton(userRole));
 
-        return accountRepository.save(newAccount);
+        Account savedAccount = accountRepository.save(newAccount);
+        log.info("Successfully created account for username: {}", savedAccount.getUsername());
+        return savedAccount;
     }
 
     @Override
@@ -70,15 +80,18 @@ public class AccountService implements IAccountService {
     }
 
     @Override
+    public List<Account> getAllAccounts() {
+        return accountRepository.findAll();
+    }
+
+    @Override
     public Account getAccountById(Long id) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAccountById'");
+        return accountRepository.findById(id).orElseThrow();
     }
 
     @Override
     public Account getAccountByUsername(String username) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAccountByUsername'");
+        return accountRepository.findByUsername(username).orElseThrow();
     }
 
     @Override
